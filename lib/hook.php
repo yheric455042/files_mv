@@ -55,7 +55,21 @@ class Hook {
             $this->addNotificationsForFileAction($params['oldpath'], $params['newpath'], 'file_renamed', 'renamed_self');
         }
 
+     
 
+    }
+
+    public function fileCopy($oldpath, $newpath) {
+        $oldpath = explode('/',$oldpath);
+        $newpath = explode('/',$newpath);
+        
+        unset($oldpath[0]);
+        unset($newpath[0]);
+
+        $oldpath = implode('/',array_filter($oldpath));
+        $newpath = implode('/',array_filter($newpath));
+        
+        $this->addNotificationsForFileAction($oldpath, $newpath, 'file_copyed', 'copyed_self');
 
     }
     

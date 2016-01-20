@@ -14,18 +14,18 @@ namespace OCA\Files_mv\AppInfo;
 \OCP\Util::addScript( 'files_mv', "move" );
 \OCP\Util::addStyle('files_mv', 'mv');
 
-/*
+
 $app = new Application();
 $app->getContainer()->query('FilesHook')->register();
-*/
 
-\OCA\Files_mv\Hooks\FilesHook::register();
+
+\OCA\Files_mv\HookStatic::register();
 
 \OC::$server->getActivityManager()->registerExtension(function() {
-            return new \OCA\Files_mv\Activity(
-                \OC::$server->query('L10NFactory'),
-                \OC::$server->getURLGenerator(),
-                \OC::$server->getActivityManager()
-            );
-    });
+    return new \OCA\Files_mv\Activity(
+        \OC::$server->query('L10NFactory'),
+        \OC::$server->getURLGenerator(),
+        \OC::$server->getActivityManager()
+    );
+});
 

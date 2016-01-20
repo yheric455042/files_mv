@@ -19,6 +19,7 @@ use OCP\AppFramework\App;
 use \OCA\Files\Service\TagService;
 use \OCP\IContainer;
 use \OCA\Files_mv\Hook;
+use \OCA\Files_mv\Hooks\FilesHook;
 class Application extends App {
 	public function __construct(array $urlParams=array()) {
 		parent::__construct('files_mv', $urlParams);
@@ -46,6 +47,14 @@ class Application extends App {
 				$c->query('CurrentUID')
 			);
 		});
+        
+        $container->registerService('FilesHook', function($c) {
+            return new FilesHook(
+                $c->query('ServerContainer')->getRootFolder(),
+                $c->query('Hooks')
+            );
+
+        });
 
         $container->registerService('CurrentUID', function(IContainer $c) {
 			/** @var \OC\Server $server */

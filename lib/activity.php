@@ -15,7 +15,6 @@ class Activity implements IExtension {
     const TYPE_SHARE_RENAMED = 'file_renamed';
     const TYPE_SHARE_COPYED = 'file_copyed';
 
-
 	/** @var Factory */
 	protected $languageFactory;
 
@@ -77,30 +76,90 @@ class Activity implements IExtension {
 	}
 
     protected function translateShort($text, IL10N $l, array $params) {
+        static $imgOrtext = 0;
+
+        $params[0] = $this->oldpathHandler($params[0]);
+        $params[1] = $this->newpathHandler($params[1], $text);
+
 		switch ($text) {
 			case 'renamed_self':
-				return (string) $l->t('Renamed by %2$s', $params);
-			case 'copyed_self':
-				return (string) $l->t('Copyed by %2$s', $params);
-			case 'moved_self':
-				return (string) $l->t('Moved by %2$s', $params);
+                $params[1] = preg_replace('/(<a class="filename".*>)(.*)(<.*>)/', '<strong>${2}</strong>',$params[1]);
 
+				return (string) $l->t('Changed the filename %1$s to %2$s', $params);
+
+			case 'moved_self':
+                $imgOrtext++;
+                $imgOrtext %= 2;
+
+                if($this->isHomeDirectory($params[1], $imgOrtext)) {
+                    $params[1] = preg_replace('/(<a class="filename".*>)(.*)(<.*>)/','<strong>'.$l->t('home directory') .'</strong>',$params[1]);
+                    
+                    return (string) $l->t('Moved from %1$s to your %2$s', $params);
+
+                } else {
+                    $params[1] = preg_replace('/(<a class="filename has-tooltip".*>)(.*)(<.*>)/', '<strong>${2}</strong>', $params[1]);
+
+                    return (string) $l->t('Moved from %1$s to %2$s', $params);
+                }
+
+			case 'copyed_self':
+                $imgOrtext++;
+                $imgOrtext %= 2;
+                file_put_contents('123.txt','fdf');
+                if($this->isHomeDirectory($params[1], $imgOrtext, 'copyed_self')) {
+                    $params[1] = preg_replace('/(<a class="filename".*>)(.*)(<.*>)/', '<strong>'. $l->t('home directory').'</strong>',$params[1]);
+
+                    return (string) $l->t('Copyed the file %1$s to your %2$s', $params);
+
+                } else {
+                    $params[1] = preg_replace('/(<a class="filename has-tooltip".*>)(.*)(<.*>)/', '<strong>${2}</strong>', $params[1]);
+
+                    return (string) $l->t('Copyed the file %1$s to %2$s', $params);
+                }
+
+						
 			default:
 				return false;
 		}
+
 	}
 
     protected function translateLong($text, IL10N $l, array $params) {
+        static $imgOrtext = 0;
+
         $params[0] = $this->oldpathHandler($params[0]);
         $params[1] = $this->newpathHandler($params[1], $text);
+
 		switch ($text) {
-            
 			case 'renamed_self':
 				return (string) $l->t('You changed the filename %1$s to %2$s', $params);
+
 			case 'moved_self':
-				return (string) $l->t('You moved the file %1$s to %2$s', $params);
+                $imgOrtext++;
+                $imgOrtext %= 2;
+
+                if($this->isHomeDirectory($params[1], $imgOrtext)) {
+                    $params[1] = preg_replace('/(<a class="filename".*>)(.*)(<.*>)/','${1}'.$l->t('home directory') .'${3}',$params[1]);
+                    
+                    return (string) $l->t('You moved the file %1$s to your %2$s', $params);
+                } else {
+                    return (string) $l->t('You moved the file %1$s to %2$s', $params);
+                }
+
 			case 'copyed_self':
-				return (string) $l->t('You copyed th file %1$s to %2$s', $params);
+                $imgOrtext++;
+                $imgOrtext %= 2;
+
+                if($this->isHomeDirectory($params[1], $imgOrtext)) {
+                    $params[1] = preg_replace('/(<a class="filename".*>)(.*)(<.*>)/','${1}'. $l->t('home directory').'${3}',$params[1]);
+
+                    return (string) $l->t('You copyed the file %1$s to your %2$s', $params);
+
+                } else {
+                    
+                    return (string) $l->t('You copyed the file %1$s to %2$s', $params);
+                }
+
 						
 			default:
 				return false;
@@ -108,7 +167,7 @@ class Activity implements IExtension {
 	}
 
 	function getSpecialParameterList($app, $text) {
-		/*if ($app === 'files_mv') {
+		if ($app === 'files_mv') {
 			switch ($text) {
 				case 'renamed_self':
                 case 'copyed_self':
@@ -118,7 +177,7 @@ class Activity implements IExtension {
                     ];
 
 			}
-		}*/
+		}
 
 		return false;
 	}
@@ -168,47 +227,55 @@ class Activity implements IExtension {
         return false;
     }
     
+    protected function isHomeDirectory($newpath, $imgOrtext) {
+        if($imgOrtext) {
+            $pattern = '/(<a class="filename has-tooltip".*>)(.*)(<.*>)/';
+            preg_match($pattern, $newpath, $matches);
+
+            return empty($matches[2]);
+
+        /*} else if($text === 'copyed_self') {
+            preg_match('/.*%2Ffiles(.*)&/', $newpath, $matches);
+            return empty($matches[1]);
+*/
+        }
+        return false;
+
+    }
+
+
     protected function oldpathHandler($oldpath) {
         $pattern = '/(<.*>)(.*)(<.*>)/';
         preg_match($pattern, $oldpath, $matches);
-
-        $file = count($matches) === 1 ? $matches[0] : $matches[2];
+        $file = count($matches) === 0 ? $oldpath : $matches[2];
 
         $path = explode("/",$file);
-       
-        $path = count($matches) === 1 ? $path[count($path) - 1] : '<strong>'.$path[count($path) - 1].'</strong>';
+         
+        $path = count($matches) === 0 ? $path[count($path) - 1] : '<strong>'.$path[count($path) - 1].'</strong>';
 
         return $path;  
        
     }
 
     protected function newpathHandler($newpath, $text) {
-        
         if($text === 'renamed_self') {
            return $newpath;
 
         } else {
-
-            if(substr($newpath,0,2) === "<a") {
-                $pattern = "/(<.*>)(.*)(<.*>)/";
-                preg_match($pattern, $newpath, $matches);
-
-                $file = explode("/", $matches[2]);
-                unset($file[count($file) - 1]);
-                $path = implode("/", $file);
-                $replacement = '${1}'.$path.'${3}';
-                 
-                file_put_contents('path.txt', preg_replace($pattern, $replacement, $newpath));
-
-                return $newpath;
+            $matches = array(); 
+            $pattern = '/(<a class="filename has-tooltip".*>)(.*)(<.*>)/';
+            preg_match($pattern, $newpath, $matches);
+            
+            if(count($matches)) {
+                preg_match('/.*=%2F(.*)&/', $matches[1], $dirArray);
+                $dir = $dirArray[1];
+                $dir = explode('%2F',$dir);
+                $replacement = '${1}'.$dir[count($dir) - 1].'${3}';
+                
+                return preg_replace($pattern,$replacement,$newpath);
             }
 
-            $path = explode("/", $newpath);
-            unset($path[count($path) - 1]);
-            $transpath = implode("/", $path);
-            $transpath = '<strong>/'.$transpath.'</strong>';
-            return $transpath;
-
+            return $newpath;
         }
 
     }

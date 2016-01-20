@@ -3,21 +3,25 @@
 namespace OCA\Files_mv\Hooks;
 
 use OCP\Util;
-
+use OCA\Files_mv\Hook;
 class FilesHook {
     
-    static protected function getHooks() {
-		$app = new \OCA\Files_mv\AppInfo\Application();
-		return $app->getContainer()->query('Hooks');
-	}
+    private $rootFolder;
+    private $hook;
 
-    public static function fileRename($params) {
-        file_put_contents('action.txt','123');
-		self::getHooks()->fileRenameOrMove($params);
+    public function __construct($rootFolder,Hook $hook) {
+        $this->rootFolder = $rootFolder;
+        $this->hook = $hook;
     }
+    
+    public function register() {
 
-    public static function register() {
-		Util::connectHook('OC_Filesystem', 'post_rename', 'OCA\Files_mv\Hooks\FilesHook', 'fileRename');
+        $copy  = function($source, $target) {
+            
+            $this->hook->fileCopy($source->getInternalPath(), $target->getInternalPath());
+        };
+        
+        $this->rootFolder->listen('\OC\Files','postCopy',$copy);
     }
 }
 
